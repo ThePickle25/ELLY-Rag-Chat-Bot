@@ -1,0 +1,578 @@
+[
+    {
+        "page_content": "Lane Detection For AutonomousCar's High Precision Localization\nSystem\nPham Tuan VietNguyen Dac Hoang Long\nPham Tien Hieu\nSupervisor: Assoc. Prof. Phan Duy Hung\nBachelor of Artificial IntelligenceHoa Lac campus - FPT University\nThe image shows a logo for FPT University.  The logo features the FPT University name in orange text. Above it is a multicolored FPT logo, with the words \"FPT Education\" to its right. To the left is a QS Stars award, indicating that the university received a rating for excellence in 2012.2024\n\u00a9 FPT University 2024. All rights reserved",
+        "metadata": {
+            "page": 1
+        }
+    },
+    {
+        "page_content": "Acknowledgment\nWe gratefully acknowledge the support of Phenikaa-X Joint Stock Company for theirfunding, which facilitated the creation of an environment conducive to this research.\nIn this journey of academic pursuit, we owe a debt of gratitude to Assoc. Prof.Phan Duy Hung, whose unwavering dedication and enthusiastic guidance have beenthe cornerstone of our progress over the past four months. His invaluable insights,patience, and encouragement have played an integral role in shaping our ideas andrefining our thesis. We are truly fortunate to have had such a committed mentor byour side.",
+        "metadata": {
+            "page": 2
+        }
+    },
+    {
+        "page_content": "We extend our heartfelt thanks to the esteemed lecturers at FPT University,particularly those within the Information Technology Specialization Department.Their expertise, support, and commitment to excellence have provided us with asolid foundation and the necessary skills to navigate the complexities of our research.Their dedication to nurturing intellectual curiosity has been a source of inspirationthroughout this journey.\nFurthermore, we express our deep appreciation to our families and friends,whose unwavering encouragement and unwavering belief in our abilities have been aconstant source of strength. Their support, understanding, and valuable insights haveenriched our academic endeavors and motivated us to strive for excellence. We areprofoundly grateful for their enduring love and encouragement.",
+        "metadata": {
+            "page": 2
+        }
+    },
+    {
+        "page_content": "Together, these individuals have played an indispensable role in our academicjourney, and for that, we are eternally grateful. Their support has been instrumental inthe completion of this thesis, and we humbly acknowledge their contributions withheartfelt gratitude.\n1",
+        "metadata": {
+            "page": 2
+        }
+    },
+    {
+        "page_content": "Abstract",
+        "metadata": {
+            "page": 3
+        }
+    },
+    {
+        "page_content": "Localization is a critical component for the safe and efficient operation ofautonomous vehicles, as it enables precise positioning within the environment. Inthis paper, we present a novel approach to real-time visual-based localization forautonomous vehicles that combines the strengths of deep learning-based lanedetection for robust perception with map matching algorithms for accuratelocalization against a priori map data. Through extensive experimentation andevaluation, our system achieves a remarkable mean Euclidean error ofapproximately 0.5 meters, demonstrating high precision in localization tasks.Moreover, our approach operates at an impressive frame rate of approximately 35frames per second (fps), ensuring timely and responsive localization updatescrucial for real-time decision-making in autonomous driving scenarios toout-perform previous works on visual-based localization systems. These resultsunderscore the efficacy and feasibility of our method in addressing thevisual-based",
+        "metadata": {
+            "page": 3
+        }
+    },
+    {
+        "page_content": "in autonomous driving scenarios toout-perform previous works on visual-based localization systems. These resultsunderscore the efficacy and feasibility of our method in addressing thevisual-based localization challenges in autonomous vehicle navigation, pavingthe way for enhanced safety and reliability in autonomous driving systems.",
+        "metadata": {
+            "page": 3
+        }
+    },
+    {
+        "page_content": "Keywords: Lane Detection, Autonomous, Localization, Deep learning\n2",
+        "metadata": {
+            "page": 3
+        }
+    },
+    {
+        "page_content": "Table of contents\nAcknowledgment1Abstract2Table of contents3List of tables4List of figures5List of abbreviations and acronyms61. Introduction71.1. Motivation71.2. Related work81.2.1. Lane Detection81.2.2. Visual-based Localization101.2.3. Monte Carlo Localization (Particle Filters)122. Methodology142.1. GNSS Corrector142.2. Camera Corrector152.3. IMU Corrector173. Experiment213.1. Datasets and evaluation metrics213.1.1. Datasets213.1.2. Evaluation metrics223.2. Implementation Detail233.3. Result Analysis243.3.1. Whole System Result Analysis243.3.2. Corner Cases254. Conclusion & Future Work27References28\n3",
+        "metadata": {
+            "page": 4
+        }
+    },
+    {
+        "page_content": "List of tables\nTable 1.Benchmark of CLRNet and other models results in CULane Dataset9\nTable 2.Comparison of FPS and Mean euclidean error of difference visual-based\nlocalization methods in AWSIM simulation25\n4",
+        "metadata": {
+            "page": 5
+        }
+    },
+    {
+        "page_content": "List of figures\nFigure 1. LaneNet architecture8Figure 2. The architecture of CLRNet9Figure 3. The three parts of the approach : map generation, ridge detection andcomparison with ICP algorithms are articulated as shown by this figure.10Figure 4. The pipeline of map-based localization11\nFigure 5. Yabloc [16] basic pipeline11\nFigure 6. The probability densities and particle sets for one\niteration of the algorithm.13\nFigure 7. Camera Corrector Example15\nFigure 8. Lateral and Longitudinal distance calculation18\nFigure 9. Reinitialize IMU pose with constraints19\nFigure 10. IMU weight update affect to final PF pose19\nFigure 11. Example of 9 categories in CULane Dataset21\nFigure 12.Integrated result of our method to Autoware and AWSIM simulation24\n5",
+        "metadata": {
+            "page": 6
+        }
+    },
+    {
+        "page_content": "List of abbreviations and acronyms\nFPS:Frame Per Second\nNDT:Normal Distributions Transform\nICP:Iterative Closest Point\nEKF:Extended Kalman Filter\nGNSS:Global Navigation Satellite System\nIMU:Inertial Measurement Unit\nLIDAR:Light Detection and Ranging\nCNN:Convolutional Neural Networks\nYOLO:You Only Look Once Network\nFPN:Feature Pyramid Networks\nIoU:Intersection over Union\nMSE:Mean Square Error\nROI:Region Of Interest\nLaneATTLane Attention Detection Networks\nPolyLaneNetPolynomial Lane Detection Networks\nMCLMonte Carlo Localization\n6",
+        "metadata": {
+            "page": 7
+        }
+    },
+    {
+        "page_content": "1. Introduction\n1.1. Motivation\nLocalization plays a pivotal role in enabling the operational functionality ofautonomousvehicles,servingasthecornerstoneforsafenavigationanddecision-making in dynamic environments. Traditionally, localization systems rely onthe fusion of data from a diverse array of sensors, including Global NavigationSatellite Systems (GNSS), Inertial Measurement Units (IMU), LIDAR (LightDetection and Ranging), Radar, and Cameras. While LIDAR offers high-precisionlocalization, its adoption can be limited by cost constraints and slower scanningfrequencies, prompting researchers to explore alternative camera-based localizationmethods.\nWithin camera-based localization, two prominent methodologies emerge: VisualOdometry and Map Matching. Each approach presents unique advantages andchallenges, shaping the landscape of research and development in autonomous vehiclelocalization.",
+        "metadata": {
+            "page": 8
+        }
+    },
+    {
+        "page_content": "Visual Odometry methods [1, 2, 3, 4, 5], hold the advantage of versatility,capable of functioning across a wide range of environments. However, they aresusceptible to drift over prolonged operation and often face challenges in achievingreal-time processing within autonomous systems.\nConversely, Map Matching methods have gained prominence for their relianceon traditional lane detection algorithms followed by aligning detected lane lines with apredefined map. While these methods offer a structured approach, they struggle toeffectively mitigate noise from real-world environments and the inherent vibrationspresent in camera systems.",
+        "metadata": {
+            "page": 8
+        }
+    },
+    {
+        "page_content": "Inresponsetothesechallenges,thisproposalintroducesanovelmono-camera-based localization method. Central to this approach is the integration ofa Deep Learning Lane Detection model, followed by map matching techniques. Byharnessing the capabilities of deep learning, this method aims to overcome thelimitations of traditional lane detection algorithms, offering improved robustness andaccuracy in localization tasks.\nThrough the fusion of deep learning-based lane detection with map matching,this proposed method endeavors to provide a more reliable and precise localizationsolution for autonomous vehicles. By leveraging the strengths of both approaches, itseeks to navigate the complex landscape of real-world environments with enhancedefficacy, paving the way for advancements in autonomous vehicle localizationresearch and practical implementation.\n7",
+        "metadata": {
+            "page": 8
+        }
+    },
+    {
+        "page_content": "1.2. Related work\n1.2.1. Lane Detection\nLane detection is a crucial aspect of computer vision and autonomous vehicletechnology. It involves identifying and tracking the lanes on a road to assist in variousapplications such as lane-keeping assistance, lane departure warning, and autonomousdriving. The primary goal of lane detection is to locate and delineate the lanes,typically represented as painted markings on the road surface. This task is essential forenabling vehicles to understand their position within the road and make informeddecisions based on the detected lane boundaries. There are 3 main approaches toperform this task such as Segmentation-based, Anchor-based and Parameter-based.Each method has its own advantages and drawbacks.",
+        "metadata": {
+            "page": 9
+        }
+    },
+    {
+        "page_content": "With Segmentation-based methods, [6, 7, 8] is easy to implement and achievepixel-wise accuracy but because of this, this method is not robust enough in real-lifeapplications. Furthermore, this method doesn't understand the relationship betweenpixels of the same line and needs lots of post processing to get a smooth and identicallane line. One of the most famous segmentation-based methods is LaneNet [6]. Thismethod treats lane detection as an instance segmentation problem, consisting of a lanesegmentation branch and a lane embedding branch that can be trained end-to-end. Thesegmentation branch has two output classes which are background or lane. The laneembedding branch further disentangles the segmented lane pixels into different laneinstances. Furthermore, combines the benefits of binary lane segmentation with aclustering loss function designed for one-shot instance segmentation.\nFigure 1: LaneNet architecture",
+        "metadata": {
+            "page": 9
+        }
+    },
+    {
+        "page_content": "Figure 1: LaneNet architecture\nUnlike the segmentation-based methods, Parameter-based methods [9, 10] don\u2019tneed much post processing and have a significantly low computational cost. But mostof them need a predefined number of lanes and choose which polynomial orderrepresents a line. And because data is usually a long-tail distribution, this method canbe overfit with a straight line and can\u2019t learn how curve lines represent. InPolyLaneNet [9], they use third order polynomial regression and each output\n8\nThe image is a flowchart illustrating a lane detection system.  It shows the process of taking a road image as input, processing it through a shared encoder and separate embedding and segmentation branches, performing clustering on the resulting data, and finally outputting a lane segmentation map.  The steps involve:",
+        "metadata": {
+            "page": 9
+        }
+    },
+    {
+        "page_content": "1. **Input Image:** A photograph of a highway scene with several lanes and cars.\n2. **Shared Encoder:** The image is fed into a shared encoder, a type of neural network that extracts features.\n3. **Embedding Branch:**  This branch processes the shared encoder output to create a pixel embedding (a color-coded representation of the image's features).\n4. **Segmentation Branch:** This branch processes the shared encoder output to create a binary lane segmentation (a black and white image where white indicates lane markings).\n5. **Clustering:** The pixel embeddings and the binary lane segmentation are combined and processed through a clustering algorithm. This step groups similar pixels together, likely based on their location and features.\n6. **Output Lane Segmentation Map:** The final output is a color-coded image showing the detected lanes. Each lane is represented by a different color.",
+        "metadata": {
+            "page": 9
+        }
+    },
+    {
+        "page_content": "polynomial represents each lane marking in the image and corresponding confidencescores and vertical offset. They also predict the vertical position h of the horizon line,which helps to define the upper limit of the lane markings. But all of that can still beout-performed by Anchor-based methods.\nSimilar to famous object detection methods like YOLO, anchor-based method[11, 12] first predefined line anchor which was first introduced in LaneATT [11]. Thisline anchor contains (1) land and background probabilities. (2) the start points of thelane and the angle between the x-axis of the lane anchor (termed as x, y, theta). (3) Thelength of the lane. (4) The N offset points of that lane. This method depends hardly onthe anchor generated but doesn't need much post processing and is more likely to getstate of the art in 2D lane detection and can be used in real-time application. Above allof those methods, this work chooses CLRNet [12] as our baseline.\nFigure 2: The architecture of CLRNet [12]",
+        "metadata": {
+            "page": 10
+        }
+    },
+    {
+        "page_content": "Figure 2: The architecture of CLRNet [12]\nThis method includes a CNN backbone then combines information fromdifferent features maps using FPN then each feature map is combined with its previousfeature maps to ROIGather module which contains a cross attention between the prioranchor to the features map for global context of lane information. Then smallerfeatures map will be used to further fine-tune larger features map. Finally, theypropose Line IoU loss for lane detection, regressing the lane as the whole unit (Fig. 1)\nTable 1. Benchmark of CLRNet and other models results in CULane Dataset\nModelEvaluationDataset\nF1@50GFLOPs\nLaneATT-ResNet18 [11]LaneATT-ResNet34 [11]LaneATT-ResNet122 [11]CondLane-ResNet18 [13]CondLane -ResNet34 [13]CondLane -ResNet101 [13]CLRNet-ResNet34 [12]CLRNet-ResNet101 [12]\nCULaneCULaneCULaneCULaneCULaneCULaneCULaneCULane\n75.1376.6877.0278.1478.7479.4879.7380.13\n9.318.070.510.219.644.821.542.9CLRNet-DLA34 [12]CULane80.4718.4",
+        "metadata": {
+            "page": 10
+        }
+    },
+    {
+        "page_content": "CULaneCULaneCULaneCULaneCULaneCULaneCULaneCULane\n75.1376.6877.0278.1478.7479.4879.7380.13\n9.318.070.510.219.644.821.542.9CLRNet-DLA34 [12]CULane80.4718.4\nThe image is a diagram illustrating the architecture of a lane detection model, specifically mentioning CLRNet with a DLA34 backbone.  It's broken down into three sections:",
+        "metadata": {
+            "page": 10
+        }
+    },
+    {
+        "page_content": "**(a) Refinement:** This shows a multi-stage refinement process.  Feature maps from a lower level are fed into subsequent layers (\"Head\") to refine predictions progressively.  This suggests an iterative approach to improving lane line detection.\n\n**(b) RoIGather:** This section details a region of interest (ROI) pooling and processing mechanism.  Features from the refinement stage are resized, flattened, and passed through convolutional (Conv) and fully connected (FC) layers. This likely extracts relevant features for lane prediction from specific regions.\n\n**(c) Loss:** This shows the loss function used to train the model.  It employs a combination of Focal loss and Line IoU loss.  Focal loss likely addresses class imbalance (e.g., more background pixels than lane pixels), while Line IoU loss optimizes the intersection over union for lane line prediction accuracy.",
+        "metadata": {
+            "page": 10
+        }
+    },
+    {
+        "page_content": "In summary, the diagram illustrates a sophisticated lane detection network that combines multi-stage refinement, region-based feature extraction, and a combined loss function for effective lane line prediction.  The mention of \"RNet-DLA34\" and \"CULane 80.47\" in the provided text suggests this is a specific model architecture tested on a dataset (\"CULane\").\nCLRNet with DLA34 as backbone has proven its effectiveness over othermodels (shown in Table. 1). Thus, this work uses the CLRNet-DLA34 to detect lanelines for autonomous localization problems.\n9",
+        "metadata": {
+            "page": 10
+        }
+    },
+    {
+        "page_content": "1.2.2. Visual-based Localization\nVisual-based Localization is a method which uses camera image and other cheapsensors like GNSS and IMU to handle localization problems. This is already beingused in self driving car localization, in David\u2019s method [14], First it generates mapusing OpenStreetMap data and apply ridge detector with camera image, then doingIterative closest point (ICP) scan matching to corrected position with prebuilt mapusing OpenStreetMap data. But this method has several drawbacks such as it is notrobust in real world environments and since this matching method doesn't take careabout longitudinal data, as the result this will fail in high way scenarios.\nFigure 3: The three parts of the approach: map generation, ridge detection and comparison with ICP algorithm\nare articulated as shown by this figure.",
+        "metadata": {
+            "page": 11
+        }
+    },
+    {
+        "page_content": "Figure 3: The three parts of the approach: map generation, ridge detection and comparison with ICP algorithm\nare articulated as shown by this figure.\nAfter that, Sadli\u2019s method [15], using a similar method to first segment the laneusing LaneNet [6] then estimate the ego\u2019s position relative to the median of the lanethen correct it with map and GPS data. But once again, this method still has the sameproblem like previous work.\nThe image is a flowchart depicting a system for correcting the position of a camera.  The system uses OpenStreetMap data and a camera image as inputs.",
+        "metadata": {
+            "page": 11
+        }
+    },
+    {
+        "page_content": "The OpenStreetMap data is fed into a \"Map generator,\" which produces map data.  The camera image is fed into a \"Ridge detector,\" which identifies ridges (likely road edges) within the image.  The map data and detected ridges are then both fed into an \"ICP\" (Iterative Closest Point) algorithm, which compares the two data sets to calculate the corrected position of the camera.  The output of the system is the \"Corrected position.\"\n10",
+        "metadata": {
+            "page": 11
+        }
+    },
+    {
+        "page_content": "Figure 4: The pipeline of map-based localization",
+        "metadata": {
+            "page": 12
+        }
+    },
+    {
+        "page_content": "Recently, Yabloc [16] which is developed by Tier4 has been represented as anopen source visual-based localization. Yabloc [16] uses particle filter or maybe knownas monte-carlo localization to combine the matching between image and lanelet2,GPS, IMU to get the probability of the pose (Fig. 4). This method using a map built bylanelet2 and landmarks from the camera is a lane line. It is still using GPS to localsearch the relative position in lanelet2 map and then using particle filter to find thebest particle fit by both GPS and camera measurements projected to a predefined map.Its basic principle is first using line segmentation detectors and graph segmentationfrom OpenCV. After getting the graph segmentation, it will find the most likely part islane and filter all the line segmentation in that segment area as good line and other asbad line. Then transform these segments for each particle and determine the particle\u2019sweight by comparing them with the cost map generated from lanelet2.",
+        "metadata": {
+            "page": 12
+        }
+    },
+    {
+        "page_content": "The image is a flowchart depicting the stages of a localization algorithm, likely for autonomous driving.  It shows a series of steps progressing from raw sensor data to a final localization estimate.",
+        "metadata": {
+            "page": 12
+        }
+    },
+    {
+        "page_content": "The process begins with line segment detection from a street scene image, followed by graph-based segmentation that separates the road from other areas.  These line segments, differentiated between road and non-road segments, are then projected onto a cost map.  This cost map is then fed into a particle filter, a probabilistic localization technique that incorporates the cost map information,  3D projected line segments, and weighted particles to refine the localization estimate, ultimately resulting in a final vehicle position represented by the weighted particles.  The final stage is the particle weighting step where the probability of each potential location is evaluated and refined.  The entire process utilizes lanelet2 data for road map information.",
+        "metadata": {
+            "page": 12
+        }
+    },
+    {
+        "page_content": "The image is a flowchart depicting a map-based localization system.  The system takes GPS input and camera images as inputs. The GPS input feeds into a \"Map-based Localization\" module, which consists of a \"Local Search Map\" and a \"Closest Point Map-Matching\" component.  The camera input feeds into a \"Lane Segmentation\" module.  The outputs of the \"Map-based Localization\" and \"Lane Segmentation\" modules are then used by the \"Estimating Vehicle's Position Relative to Median Lane\" module. Finally, all these inputs are processed to determine the \"Vehicle's Position Correction Based on Lane Information,\" ultimately resulting in the \"Lane-Level Position\" output.  A \"Reference Map\" is used as a database for the localization.\nFigure 5: Yabloc [16] basic pipeline\n11",
+        "metadata": {
+            "page": 12
+        }
+    },
+    {
+        "page_content": "After running some experiments of this method with Autoware and Awsimsimulation, this lateral localization error is not a lane line error which makes the egocar hit the pavement. Due to the graph segmentation and search road marking canreduce wrong output which means this considering non road area is road area resultsas filter line segment worse. Without accurate road markings, this algorithm can\u2019tmatch the cost map and the particle's weight is not distributed on a single laneanymore. In real world application, there are some other issues when the roadmarkings are not present in real life or lanelet2 map, this will eventually fail. In thiscase, only GNSS is used which can be sure is centimeters level. And this method usesthe opencv algorithm so it cannot be robust in real world environments. To handle thisproblem, we present a new method that innovates Yabloc [16] to get robust and lowerror visual-based localization.\n1.2.3. Monte Carlo Localization (Particle Filters)",
+        "metadata": {
+            "page": 13
+        }
+    },
+    {
+        "page_content": "Monte Carlo Localization (MCL), often referred to as particle filters, serves as arobust method for enabling a robot to accurately determine its position within a knownenvironment. At its core, MCL leverages a probabilistic framework that combinessensor measurements with the robot's motion model to estimate its location. Initially, alarge number of particles are uniformly distributed across the map, effectivelyrepresenting potential positions of the robot. As the robot moves, it continuouslyupdates the positions of these particles based on its motion model, which predictswhere the robot is likely to be next. Concurrently, sensor data is collected and used toevaluate the likelihood of each particle being the true position of the robot. Thisevaluation involves comparing the sensor readings to what the robot would expect toobserve at each particle's location. Bayesian inference is then employed to assignweights to the particles, with those that are more consistent with the",
+        "metadata": {
+            "page": 13
+        }
+    },
+    {
+        "page_content": "readings to what the robot would expect toobserve at each particle's location. Bayesian inference is then employed to assignweights to the particles, with those that are more consistent with the sensormeasurementsreceivinghigherweights.Conversely,particlesthatdeviatesignificantly from the observed data are assigned lower weights. Through successiveiterations of this process, the particle set undergoes resampling, where particles withhigher weights are more likely to be replicated, while those with lower weights arepruned. This iterative refinement gradually narrows down the potential positions of therobot until convergence is achieved, providing a precise estimate of its location withinthe environment. MCL's versatility and effectiveness make it a cornerstone in roboticsapplications, facilitating tasks ranging from localization and navigation to mappingand exploration in dynamic and challenging environments.",
+        "metadata": {
+            "page": 13
+        }
+    },
+    {
+        "page_content": "12",
+        "metadata": {
+            "page": 13
+        }
+    },
+    {
+        "page_content": "Figure 6: The probability densities and particle sets for one\niteration of the algorithm.\nTo be more specific, for example, we randomly sample N particles in the know mapwith the formula Sk= {si\nk; i=1\u2026N} and following the steps below:1. Each particle in Sk represents a possible location of the robot within the map.2. From the set of particles Sk-1 from the previous time step apply the motion\nmodel to each particle sik-1 to predict its next state. Specifically, we samplefrom a probability distribution p(xk|Si\nk-1,uk-1) , uk-1 is the input command fromthe previous step. It creates a new particle set S\u2019k, the set presents the predictionof the position of the robot in k.3. Then we measure the weight of each samples in S\u2019k by the weigh wi\nk =p(zk|S\u2019i",
+        "metadata": {
+            "page": 14
+        }
+    },
+    {
+        "page_content": "k =p(zk|S\u2019i\nk) (zk is the information that the sensor provides). The higher the weight,the more likely it is that the particle's position can be the robot's position. Thenwe resample the particles with high weight, turn them into new particles set Sk.4. Repeating steps 2 and 3 recursively a large enough number of times, we will\nget the convergence of the particles, thereby getting the position of the robot.\n13\nThe image is a diagram illustrating the particle filter algorithm, a method used in robotics for localization.  It shows three stages:",
+        "metadata": {
+            "page": 14
+        }
+    },
+    {
+        "page_content": "1. **Sample particle in known map:** A rectangular area representing a known map is shown, with numerous hexagonal particles scattered randomly within it. One particle is highlighted in purple, representing the robot's true location. This is the initial, uniform distribution of particles.\n\n2. **Weighted particle:** The same map is shown but now some particles are highlighted in red, indicating a higher weight assigned to them based on sensor readings and predictions.  The robot's true location (purple) is still shown.  Particles closer to the true location likely have higher weights.\n\n3. **Unweight and resample:** In this stage, the particles are clustered. The particles with low weights are eliminated, and new particles are generated around the high-weight particles. This concentrates the particles around the most likely location of the robot, refining the localization estimate. The purple hexagon shows the robot's true location, demonstrating the accuracy improvement.",
+        "metadata": {
+            "page": 14
+        }
+    },
+    {
+        "page_content": "The legend clarifies the symbols used:  the purple hexagon indicates the robot's true location, the red hexagons signify high-weight particles, and the black hexagons represent all other particles. The small arrow within each hexagon indicates the orientation of each particle.",
+        "metadata": {
+            "page": 14
+        }
+    },
+    {
+        "page_content": "2. Methodology\nInnovating upon the foundational framework outlined in Yabloc [16], this studypioneers a novel approach to localization pose estimation by integrating a ParticlesFilter with advanced lane detection capabilities powered by deep learning techniques.This innovative fusion of sensor data with predefined lanelet2 maps offers asubstantial improvement over traditional methods reliant solely on Opencv algorithms,ensuring heightened robustness across diverse environmental conditions.\nHowever, while this method significantly enhances localization accuracy, it alsorecognizes the inherent limitations of relying solely on lane lines for positioncorrection. Particularly in high-speed highway scenarios characterized by straightlanes, this approach may result in notable longitudinal errors. To surmount thischallenge, the study introduces an IMU corrector mechanism designed to harness therich data provided by Inertial Measurement Units (IMU).",
+        "metadata": {
+            "page": 15
+        }
+    },
+    {
+        "page_content": "Thissophisticatedapproachrepresentsasignificantadvancementinlocalization pose estimation, effectively bridging the gap between traditional sensorfusion techniques and emerging deep learning methodologies. By seamlesslyintegrating IMU data with the Particle Filter framework, the study not only enhancesaccuracy but also establishes a foundation for robust performance in complexreal-world scenarios. Ultimately, this nuanced approach promises to revolutionizelocalization systems, offering unprecedented levels of reliability and precision across awide range of applications and environments.\n2.1. GNSS Corrector",
+        "metadata": {
+            "page": 15
+        }
+    },
+    {
+        "page_content": "2.1. GNSS Corrector\nWith initial pose from GNSS, particles normal-distributed initialized and thenfine-tune yaw angle by align vector map and segmentation mask. Assumeas\ud835\udc60\ud835\udc56\ud835\udc54\ud835\udc5a\ud835\udc4e the standard deviation of particles\u2019s distribution, for each GNSS observation, GNSSCorrector computes the difference vectorbetween the observed GNSS position\ud835\udc5d\ud835\udc51\ud835\udc56\ud835\udc53and the mean position derived from the particle filter using Mahalanobis distance tomake sure this is a valid observation instead of noise. The Mahalanobis distance iscalculated as:\n\u22121 \u00b7 \ud835\udc5d\ud835\udc51\ud835\udc56\ud835\udc53                                        1( )\n\ud835\udc47\u00b7 \ud835\udc60\ud835\udc56\ud835\udc54\ud835\udc5a\ud835\udc4e\n\ud835\udc5a\ud835\udc4e\ud835\udc59\ud835\udc51\ud835\udc56\ud835\udc60=\ud835\udc5d\ud835\udc51\ud835\udc56\ud835\udc53",
+        "metadata": {
+            "page": 15
+        }
+    },
+    {
+        "page_content": "\u22121 \u00b7 \ud835\udc5d\ud835\udc51\ud835\udc56\ud835\udc53                                        1( )\n\ud835\udc47\u00b7 \ud835\udc60\ud835\udc56\ud835\udc54\ud835\udc5a\ud835\udc4e\n\ud835\udc5a\ud835\udc4e\ud835\udc59\ud835\udc51\ud835\udc56\ud835\udc60=\ud835\udc5d\ud835\udc51\ud835\udc56\ud835\udc53\nAfter being computed, this compare thewith a predefined threshold. If\ud835\udc5a\ud835\udc4e\ud835\udc59\ud835\udc51\ud835\udc56\ud835\udc60this exceeds the threshold, consider the GNSS observation as an outlier and reject it.Otherwise, accept this GNSS observation as valid. Next time, a further check isrequired to see if last mean pose and current mean pose are different to skip weightingdue to almost the same position. Else, for each particle in the set of Particles Filter, theEuclidean distance between the particle's position and the observed pose is computed.This distance serves as a metric for evaluating the proximity of each particle to the\n14",
+        "metadata": {
+            "page": 15
+        }
+    },
+    {
+        "page_content": "GNSS observation. The Euclidean distance between a particleand the\ud835\udc5d(\ud835\udc5d\ud835\udc65,  \ud835\udc5d\ud835\udc66)\nobserved poseis calculated as:\ud835\udc5d\ud835\udc5c(\ud835\udc5d\ud835\udc5c\ud835\udc65,  \ud835\udc5d\ud835\udc5c\ud835\udc66)\n2 +  (\ud835\udc5d\ud835\udc66\u2212\ud835\udc5d\ud835\udc5c\ud835\udc66)\n2                               2( )\n\ud835\udc38(\ud835\udc5d,  \ud835\udc5d\ud835\udc5c) =(\ud835\udc5d\ud835\udc65\u2212\ud835\udc5d\ud835\udc5c\ud835\udc65)\nThen, the weight are assigned based on this distance using a normal probability\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60\ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60\ud835\udc5a\ud835\udc56\ud835\udc5b\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60\ndensity function (PDF) with predefined parameters,,,\ud835\udc53\ud835\udc59\ud835\udc4e\ud835\udc61\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60\nto control the range and the spread distance of the weight distribution:\ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60, \ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60)                    3( )\n \ud835\udc51=  \ud835\udc5a\ud835\udc4e\ud835\udc65\u2061(0,  \ud835\udc5a\ud835\udc56\ud835\udc5b(|\ud835\udc38(\ud835\udc5d,  \ud835\udc5d\ud835\udc5c) | \u2212\ud835\udc53\ud835\udc59\ud835\udc4e\ud835\udc61\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60 / \ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60)     \n\u2212log\ud835\udc59\ud835\udc5c\ud835\udc54 (\ud835\udc5a\ud835\udc56\ud835\udc5b\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc50=\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc602                                          4( )\n\ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n2()                                             5( )\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60 \u00d7 \ud835\udc52\n\u2212\ud835\udc50 \u00d7\ud835\udc51\n\ud835\udc4a\ud835\udc5d\ud835\udc53= \ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n2.2. Camera Corrector",
+        "metadata": {
+            "page": 16
+        }
+    },
+    {
+        "page_content": "\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60)     \n\u2212log\ud835\udc59\ud835\udc5c\ud835\udc54 (\ud835\udc5a\ud835\udc56\ud835\udc5b\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc50=\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc602                                          4( )\n\ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n2()                                             5( )\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60 \u00d7 \ud835\udc52\n\u2212\ud835\udc50 \u00d7\ud835\udc51\n\ud835\udc4a\ud835\udc5d\ud835\udc53= \ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n2.2. Camera Corrector\nThis corrector uses a Deep Learning Lane Detection model to get the lane line andtransform it from image coordinate to map coordinate point cloud then matching withlanelet2 predefined map. But this matching is lack of longitudinal information (Fig. 3)\nThe image shows a screenshot of a computer screen displaying a simulated driving environment.  The main window shows a virtual car driving down a city street.  There are several smaller windows showing different aspects of the simulation:",
+        "metadata": {
+            "page": 16
+        }
+    },
+    {
+        "page_content": "* **Top Left:** A first-person view from the virtual car's perspective, with several colored lines overlaid, likely representing lane markings or sensor data.\n* **Middle Left:** Another first-person view, again with lines overlaid, possibly showing a different type of lane detection or path planning.\n* **Right:** A third-person view of the virtual car driving, showing its surroundings and red lines that could represent detected objects or potential hazards.\n* **Bottom Right:** A small window displaying a dark image with thin vertical red lines, which might be a processed image from the simulation's camera or sensor data.\n* **Left Side Panel:** A section showing what appears to be code or a log of data from the simulation.",
+        "metadata": {
+            "page": 16
+        }
+    },
+    {
+        "page_content": "The overall impression is a development or testing environment for autonomous driving systems. The different windows show input data, processed data, and the simulated environment itself. The colored lines and red lines suggest the presence of lane detection, object detection, and path planning algorithms.\nFigure 7: Camera Corrector Example\nThe deep learning model is designed to provide detailed lane line information,offering a comprehensive output that consists of a list of lane lines, each represented\n15",
+        "metadata": {
+            "page": 16
+        }
+    },
+    {
+        "page_content": "by 72 discrete points. However, to further analyze and utilize this data, it is imperativeto convert these pixel-based coordinates into a more universally applicable format.This involves a multi-step process to transform the pixel coordinates into worldcoordinates, making them compatible with broader spatial analysis and applications.Assumethathomogenousworldpointcoordinatesis,homogenouspixelcoordinateis\ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc5d= [\ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc65,  \ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc66,  \ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc67,,  1]\n, To initiate this conversion, the pixel coordinates are\ud835\udc43\ud835\udc56\ud835\udc65\ud835\udc52\ud835\udc59\ud835\udc5d= [\ud835\udc43\ud835\udc56\ud835\udc65\ud835\udc52\ud835\udc59\ud835\udc65,  \ud835\udc43\ud835\udc56\ud835\udc65\ud835\udc52\ud835\udc59\ud835\udc66,  1]\nfirst transformed into film coordinates,then camera coordinates, and finally world\ncoordinates using Intrinsic parameters is, Extrinsic parameters contains Rotation is\ud835\udc34\nand Translation is :\ud835\udc45\ud835\udc61\n\ud835\udc43\ud835\udc56\ud835\udc65\ud835\udc52\ud835\udc59\ud835\udc5d= \ud835\udc34\ud835\udc45|\ud835\udc61[] \ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc5d                                                6( )\nWith is formular, 3D world coordinates can be recalculated. This is achieved bycomputing the bearing and distance from the camera center to the corresponding worldpoint. The bearing is calculated as:",
+        "metadata": {
+            "page": 17
+        }
+    },
+    {
+        "page_content": "With is formular, 3D world coordinates can be recalculated. This is achieved bycomputing the bearing and distance from the camera center to the corresponding worldpoint. The bearing is calculated as:\n\u22121 * \ud835\udc43\ud835\udc56\ud835\udc65\ud835\udc52\ud835\udc59\ud835\udc5d)                                          7( )\n\ud835\udc4f\ud835\udc52\ud835\udc4e\ud835\udc5f\ud835\udc56\ud835\udc5b\ud835\udc54= (\ud835\udc45* \ud835\udc34\nFollowing this, the distance from the camera center to the world point along thebearing vector is determined:\n\ud835\udc61\ud835\udc67\ud835\udc4f\ud835\udc52\ud835\udc4e\ud835\udc5f\ud835\udc56\ud835\udc5b\ud835\udc54\ud835\udc67                                               8( )\n\ud835\udc51\ud835\udc56\ud835\udc60\ud835\udc61\ud835\udc4e\ud835\udc5b\ud835\udc50\ud835\udc52=  \u2212\nUsing the bearing and distance values, the world coordinatesand\ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc65\nare computed as:\ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc66\n\ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc65= \ud835\udc61\ud835\udc65+ \ud835\udc4f\ud835\udc52\ud835\udc4e\ud835\udc5f\ud835\udc56\ud835\udc5b\ud835\udc54\ud835\udc65* \ud835\udc51\ud835\udc56\ud835\udc60\ud835\udc61\ud835\udc4e\ud835\udc5b\ud835\udc50\ud835\udc52                                     9( )\n\ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc66= \ud835\udc61\ud835\udc66+ \ud835\udc4f\ud835\udc52\ud835\udc4e\ud835\udc5f\ud835\udc56\ud835\udc5b\ud835\udc54\ud835\udc66* \ud835\udc51\ud835\udc56\ud835\udc60\ud835\udc61\ud835\udc4e\ud835\udc5b\ud835\udc50\ud835\udc52                                  10()",
+        "metadata": {
+            "page": 17
+        }
+    },
+    {
+        "page_content": "are computed as:\ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc66\n\ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc65= \ud835\udc61\ud835\udc65+ \ud835\udc4f\ud835\udc52\ud835\udc4e\ud835\udc5f\ud835\udc56\ud835\udc5b\ud835\udc54\ud835\udc65* \ud835\udc51\ud835\udc56\ud835\udc60\ud835\udc61\ud835\udc4e\ud835\udc5b\ud835\udc50\ud835\udc52                                     9( )\n\ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc66= \ud835\udc61\ud835\udc66+ \ud835\udc4f\ud835\udc52\ud835\udc4e\ud835\udc5f\ud835\udc56\ud835\udc5b\ud835\udc54\ud835\udc66* \ud835\udc51\ud835\udc56\ud835\udc60\ud835\udc61\ud835\udc4e\ud835\udc5b\ud835\udc50\ud835\udc52                                  10()\nAfter computeand, Assume that all line is in projected to a\ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc65\ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc66flat plane with z coordinate is equal to 0 which meansis set to 0. Similar to\ud835\udc4a\ud835\udc5c\ud835\udc5f\ud835\udc59\ud835\udc51\ud835\udc67Yabloc [16], weight of particles is computed using all world coordinates lane line \ud835\udc43\ud835\udc59\ud835\udc4e\ud835\udc5b\ud835\udc52, tangent ofisand current position.. Firstly, a gain value is calculated to\ud835\udc43\ud835\udc59\ud835\udc4e\ud835\udc5b\ud835\udc52\ud835\udc43\ud835\udc61\ud835\udc43\ud835\udc5d\ud835\udc5c\ud835\udc60\ud835\udc52prioritize points close to the reference position, utilizing parameters such as\n16",
+        "metadata": {
+            "page": 17
+        }
+    },
+    {
+        "page_content": "and the differences in x and y coordinates between the lane line plane and\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\ud835\udc54\ud835\udc4e\ud835\udc56\ud835\udc5bthe reference position:\n2\n2\n\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\ud835\udc54\ud835\udc4e\ud835\udc56\ud835\udc5b* \ud835\udc43\ud835\udc59\ud835\udc4e\ud835\udc5b\ud835\udc52\ud835\udc65 \u2212\ud835\udc43\ud835\udc5d\ud835\udc5c\ud835\udc60\ud835\udc52\ud835\udc65()\n+ \ud835\udc43\ud835\udc59\ud835\udc4e\ud835\udc5b\ud835\udc52\ud835\udc66 \u2212\ud835\udc43\ud835\udc5d\ud835\udc5c\ud835\udc60\ud835\udc52\ud835\udc66()\n\ud835\udc54\ud835\udc4e\ud835\udc56\ud835\udc5b= \ud835\udc52\n                           11()\nSubsequently, the cost map is queried at the reference positionobtaining\ud835\udc43\ud835\udc5d\ud835\udc5c\ud835\udc60\ud835\udc52both the intensityand angle of that position in cost map. If the target is not\ud835\udc36\ud835\udc63\ud835\udc36\ud835\udc61mapped in the cost map, the weight of the particle remains unchanged; otherwise, theweight is adjusted according to the following equation:\n\ud835\udc4a\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\ud835\udc50\ud835\udc62\ud835\udc5f = \ud835\udc4a\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\ud835\udc5d\ud835\udc5f\ud835\udc52+  \ud835\udc54\ud835\udc4e\ud835\udc56\ud835\udc5b*   (|\ud835\udc50\ud835\udc5c\ud835\udc60  \ud835\udc43\ud835\udc61, \ud835\udc36\ud835\udc61()| * \ud835\udc36\ud835\udc63\u22120. 5)         12()\nThis iterative process ensures that the weight of particles accurately reflectstheir alignment with the lane lines and the surrounding environment, facilitating robustlateral localization.\n2.3. IMU Corrector",
+        "metadata": {
+            "page": 18
+        }
+    },
+    {
+        "page_content": "2.3. IMU Corrector\nThe process of refining the localization and navigation system involves severalintricate steps, each contributing to the accuracy and reliability of the overallframework. Beginning with the initialization phase, the Inertial Measurement Unit(IMU) Dead-reckoning pose is established using an initialization pose. Subsequently,leveraging data from the IMU and vehicle odometry, the dead-reckoning pose\u200bis\ud835\udc43\ud835\udc56\ud835\udc5a\ud835\udc62determined, while the particles filter's pose is denoted as, with the yaw of the\ud835\udc43\ud835\udc5d\ud835\udc53particles' mean pose defined as. To establish the equation of the line passing\u03b8\ud835\udc5d\ud835\udc53throughand have, the following expression is utilized::\ud835\udc43\ud835\udc5d\ud835\udc53\u03b8\ud835\udc5d\ud835\udc53\n\ud835\udc66= \ud835\udc5a \ud835\udc65\u2212 \ud835\udc65\ud835\udc5d\ud835\udc53() +  \ud835\udc66\ud835\udc5d\ud835\udc53                                            13()\nWith m is the slope of the line is defined as:\n\ud835\udc5a =  \ud835\udc61\ud835\udc4e\ud835\udc5b(\u03b8\ud835\udc5d\ud835\udc53)                                                      (14)\nNext, the projection ofonto the line defined by Equation 13 is conducted,\ud835\udc43\ud835\udc56\ud835\udc5a\ud835\udc62leadingtothecalculationofthedistancebetweentheprojectedpoint\n\ud835\udc5d= [\ud835\udc65\ud835\udc56\ud835\udc5a\ud835\udc62\n\ud835\udc5d,  \ud835\udc66\ud835\udc56\ud835\udc5a\ud835\udc62",
+        "metadata": {
+            "page": 18
+        }
+    },
+    {
+        "page_content": "Next, the projection ofonto the line defined by Equation 13 is conducted,\ud835\udc43\ud835\udc56\ud835\udc5a\ud835\udc62leadingtothecalculationofthedistancebetweentheprojectedpoint\n\ud835\udc5d= [\ud835\udc65\ud835\udc56\ud835\udc5a\ud835\udc62\n\ud835\udc5d,  \ud835\udc66\ud835\udc56\ud835\udc5a\ud835\udc62\n\ud835\udc5d]\ud835\udc43\ud835\udc5d\ud835\udc53\nwith. This process involves the following equations:\ud835\udc43\ud835\udc56\ud835\udc5a\ud835\udc62\n2 \ud835\udc65\ud835\udc5d\ud835\udc53\u22121()+\ud835\udc5a\ud835\udc66\ud835\udc56\ud835\udc5a\ud835\udc62\u2212\ud835\udc66\ud835\udc5d\ud835\udc53()+ \ud835\udc65\ud835\udc56\ud835\udc5a\ud835\udc62\n\ud835\udc5a\n\ud835\udc5d=\n\ud835\udc65\ud835\udc56\ud835\udc5a\ud835\udc62\n2+1                                      15()\n\ud835\udc5a\n17",
+        "metadata": {
+            "page": 18
+        }
+    },
+    {
+        "page_content": "\ud835\udc5d\u2212 \ud835\udc65\ud835\udc5d\ud835\udc53() +  \ud835\udc66\ud835\udc5d\ud835\udc53                                       16()\n\ud835\udc5d= \ud835\udc5a \ud835\udc65\ud835\udc56\ud835\udc5a\ud835\udc62\n\ud835\udc66\ud835\udc56\ud835\udc5a\ud835\udc62\n2\n2\n\ud835\udc5d=  (\ud835\udc65\ud835\udc56\ud835\udc5a\ud835\udc62\n\ud835\udc5d\u2212 \ud835\udc65\ud835\udc5d\ud835\udc53)\n\ud835\udc5d\u2212 \ud835\udc66\ud835\udc5d\ud835\udc53)\n\ud835\udc3f\ud835\udc5c\ud835\udc5b\ud835\udc54\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5a\ud835\udc62\n+ (\ud835\udc66\ud835\udc56\ud835\udc5a\ud835\udc62\n                      17()\n2\n2\n\ud835\udc5d=  (\ud835\udc65\ud835\udc56\ud835\udc5a\ud835\udc62\n\ud835\udc5d\u2212 \ud835\udc65\ud835\udc56\ud835\udc5a\ud835\udc62)\n\ud835\udc5d\u2212 \ud835\udc66\ud835\udc56\ud835\udc5a\ud835\udc62)\n\ud835\udc3f\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5a\ud835\udc62\n+ (\ud835\udc66\ud835\udc56\ud835\udc5a\ud835\udc62\n                      18()\n\ud835\udc5d\ud835\udc3f\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5a\ud835\udc62\n\ud835\udc5d\nTheand theof a single particle can be described in\ud835\udc3f\ud835\udc5c\ud835\udc5b\ud835\udc54\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5a\ud835\udc62\nFigure 8 for demonstration how IMU pose interacts with each particle.\nFigure 8: Lateral and Longitudinal distance calculation",
+        "metadata": {
+            "page": 19
+        }
+    },
+    {
+        "page_content": "\ud835\udc5d\ud835\udc3f\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5a\ud835\udc62\n\ud835\udc5d\nTheand theof a single particle can be described in\ud835\udc3f\ud835\udc5c\ud835\udc5b\ud835\udc54\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5a\ud835\udc62\nFigure 8 for demonstration how IMU pose interacts with each particle.\nFigure 8: Lateral and Longitudinal distance calculation\nAfter executing the aforementioned step, the system proceeds to verify whetherthe lateral displacement between the Inertial Measurement Unit (IMU) pose and themean particle pose surpasses a predetermined threshold. If this condition is met, theIMU pose undergoes reinitialization, aligning it with the mean particle's pose.Consequently, the process of assigning weights to particles is omitted, in accordancewith Equation 19. This operational flow is illustrated in Figure 9, depicting thereinitialization of the IMU pose when the lateral displacement between the mean poseof the particle and the IMU pose exceeds the defined threshold.\n\ud835\udc5a\ud835\udc52\ud835\udc4e\ud835\udc5b\ud835\udc5d> \ud835\udc59\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc61\u210e\ud835\udc5f\ud835\udc52\ud835\udc60\u210e\ud835\udc5c\ud835\udc59\ud835\udc51 \ud835\udc43\ud835\udc56\ud835\udc5a\ud835\udc62 \ud835\udc56\ud835\udc53 \ud835\udc3f\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5a\ud835\udc62\n\ud835\udc5a\ud835\udc52\ud835\udc4e\ud835\udc5b_\ud835\udc5d< \ud835\udc59\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc61\u210e\ud835\udc5f\ud835\udc52\ud835\udc60\u210e\ud835\udc5c\ud835\udc59\ud835\udc51     19()\n\ud835\udc43\ud835\udc56\ud835\udc5a\ud835\udc62=  {\ud835\udc5a\ud835\udc52\ud835\udc4e\ud835\udc5b\ud835\udc43\ud835\udc5d\ud835\udc53\n \ud835\udc56\ud835\udc53 \ud835\udc3f\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5a\ud835\udc62",
+        "metadata": {
+            "page": 19
+        }
+    },
+    {
+        "page_content": "\ud835\udc5a\ud835\udc52\ud835\udc4e\ud835\udc5b\ud835\udc5d> \ud835\udc59\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc61\u210e\ud835\udc5f\ud835\udc52\ud835\udc60\u210e\ud835\udc5c\ud835\udc59\ud835\udc51 \ud835\udc43\ud835\udc56\ud835\udc5a\ud835\udc62 \ud835\udc56\ud835\udc53 \ud835\udc3f\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5a\ud835\udc62\n\ud835\udc5a\ud835\udc52\ud835\udc4e\ud835\udc5b_\ud835\udc5d< \ud835\udc59\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc61\u210e\ud835\udc5f\ud835\udc52\ud835\udc60\u210e\ud835\udc5c\ud835\udc59\ud835\udc51     19()\n\ud835\udc43\ud835\udc56\ud835\udc5a\ud835\udc62=  {\ud835\udc5a\ud835\udc52\ud835\udc4e\ud835\udc5b\ud835\udc43\ud835\udc5d\ud835\udc53\n \ud835\udc56\ud835\udc53 \ud835\udc3f\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5a\ud835\udc62\nThe image is a diagram illustrating the geometry of a robot's motion relative to an Inertial Measurement Unit (IMU).",
+        "metadata": {
+            "page": 19
+        }
+    },
+    {
+        "page_content": "The key elements are:\n\n* **IMU pose:** A black circle representing the IMU's location.\n* **Direction of robot:** A thick, solid line indicating the robot's heading or direction of travel.\n* **LatDis:**  A curved bracket labeling the lateral distance between the robot's path and the IMU. This distance is perpendicular to the robot's direction.\n* **LongDis:** A curved bracket labeling the longitudinal distance between the robot's path and the IMU. This distance is along the line of the robot's direction.\n* **\u03b1:**  The angle between the robot's direction and the line connecting the IMU and the point of closest approach on the robot's path. A dashed line represents the line of closest approach.\n* **Heptagon (Robot):**  A heptagon (seven-sided polygon) symbolizes the robot. Its position is relative to the IMU and the robot's heading.",
+        "metadata": {
+            "page": 19
+        }
+    },
+    {
+        "page_content": "The diagram likely shows how to calculate the robot's pose (position and orientation) based on the IMU measurements and other sensor information.  The text \"\ud835\udc56\ud835\udc53 \ud835\udc3f\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5a\ud835\udc62 ... 18\" suggests there's a condition or constraint related to the lateral distance from the IMU (LatDis), perhaps specifying a threshold value of 18 units.\n18",
+        "metadata": {
+            "page": 19
+        }
+    },
+    {
+        "page_content": "Figure 9: Reinitialize IMU pose with constraints\n\ud835\udc56\ud835\udc5a\ud835\udc62\nThen, the weight of that particlecan be computed with,\ud835\udc4a\ud835\udc5d\ud835\udc53\ud835\udc53\ud835\udc59\ud835\udc4e\ud835\udc61\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n\ud835\udc56\ud835\udc5a\ud835\udc62\ud835\udc5a\ud835\udc56\ud835\udc5b\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc56\ud835\udc5a\ud835\udc62\ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc56\ud835\udc5a\ud835\udc62\n,,is parameters similar to Equations 3, 4, and 5:\ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n\ud835\udc5d| \u2212\ud835\udc53\ud835\udc59\ud835\udc4e\ud835\udc61\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n\ud835\udc56\ud835\udc5a\ud835\udc62, \ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n\ud835\udc56\ud835\udc5a\ud835\udc62)                20()\n \ud835\udc51=  \ud835\udc5a\ud835\udc4e\ud835\udc65\u2061(0,  \ud835\udc5a\ud835\udc56\ud835\udc5b(|\ud835\udc3f\ud835\udc5c\ud835\udc5b\ud835\udc54\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5a\ud835\udc62\n\ud835\udc56\ud835\udc5a\ud835\udc62 / \ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc56\ud835\udc5a\ud835\udc62)     \n\u2212log\ud835\udc59\ud835\udc5c\ud835\udc54 (\ud835\udc5a\ud835\udc56\ud835\udc5b\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc50=\n\ud835\udc56\ud835\udc5a\ud835\udc622                                        21()\n\ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n2()                                           22()\n\ud835\udc56\ud835\udc5a\ud835\udc62 \u00d7 \ud835\udc52\n\u2212\ud835\udc50 \u00d7\ud835\udc51\n\ud835\udc4a\ud835\udc5d\ud835\udc53= \ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\nFigure 10: IMU weight update affect to final PF pose\nWith this fine-tune, the system can improve the longitudinal error based on lanelevel lateral error from previous work and gyro_odometry data from vehicle and IMU\n19",
+        "metadata": {
+            "page": 20
+        }
+    },
+    {
+        "page_content": "19\nThe image is a diagram showing the relationship between a particle's mean pose and the IMU pose.  A solid line represents the particle's mean pose, which is a curved line. A dashed line represents the IMU pose.  Vertical lines with arrows show the distance between the two poses at several points along the curve.  The distance is labeled \"latdis_threshold,\" indicating a threshold for acceptable discrepancy between the two poses. A dotted red line represents the tangent of the particle's mean pose at one specific point.The image is a diagram showing the trajectory of a particle (represented by a black solid line) and its interaction with other particles of varying weights.  There are three types of particles: lower weight (cyan hexagons), medium weight (green hexagons), and high weight (red hexagons).  The particles are clustered around the particle's path, with their distribution suggesting influence or interaction.",
+        "metadata": {
+            "page": 20
+        }
+    },
+    {
+        "page_content": "A dashed black line represents another trajectory or a reference line. Two black filled circles represent points along the particle's path, with arrows indicating direction of movement (longDist). Ellipses in red, green, and light green surround clusters of the respective weight particles, showing their spatial relationship to the main particle's path. The diagram likely illustrates a physical process, possibly in a simulation, involving particle dynamics and weighted interactions.",
+        "metadata": {
+            "page": 20
+        }
+    },
+    {
+        "page_content": "by limiting the weight of particles to a certain longitudinal range calculated withvehicle\u2019s velocity and yaw.\nIn this sensor fusion system, GNSS, IMU, and camera sensors are integrated toenhance localization accuracy for the vehicle. While GNSS offers initial positionestimates,itsinherentinaccuracies,especiallyinchallengingenvironments,necessitate correction from other sensors. The IMU provides high-frequency data, butits tendency to drift over time can result in cumulative localization errors. The camerasensor adds another layer of information, particularly useful in challenging scenarios,although it may have limitations in certain corner cases. By synchronizing theirparticle filters and weight updates, these sensors support each other, compensating forindividual weaknesses and improving overall localization precision.\n20",
+        "metadata": {
+            "page": 21
+        }
+    },
+    {
+        "page_content": "3. Experiment\n3.1. Datasets and evaluation metrics3.1.1. Datasets\nIn this section, the CULane dataset [17] serves as the primary resource for training andassessing the model. Traffic lane detection plays a pivotal role in autonomous drivingsystems, facilitating vehicle navigation, lane departure warning, and enhancing overallsafety.Despiteconsiderableadvancementsincomputervision,theaccurateidentification of lane markings across diverse environmental conditions remains aformidable challenge. The CULane dataset [17] provides a comprehensive platformfor systematically investigating and tackling these challenges. This thesis endeavors toevaluate and juxtapose cutting-edge lane detection algorithms utilizing the CULanedataset [17], thereby illuminating their efficacy across various real-world scenarios.\nFigure 11: Example of 9 categories in CULane Dataset",
+        "metadata": {
+            "page": 22
+        }
+    },
+    {
+        "page_content": "Figure 11: Example of 9 categories in CULane Dataset\nCULane [17] stands out as a substantial and intricate dataset tailored foracademic research into traffic lane detection. It originates from cameras installed onsix distinct vehicles operated by various drivers in Beijing. Over 55 hours of videofootage were amassed, yielding 133,235 frames for analysis. The dataset has beenpartitioned into 88,880 instances for training, 9,675 for validation, and 34,680 fortesting. The test set is further categorized into a normal category and eight challengingcategories, each exemplified by the nine scenarios mentioned earlier. These categoriesinclude Normal (representing lanes in regular conditions), Crowded (depicting lanesamidst heavy traffic), Night (illustrating lanes in low-light conditions), No line(showcasing lanes without road markings), Shadow, Arrow, Dazzle light, Curve(indicating lanes on curved roads), and Crossroad (depicting lanes at intersections).",
+        "metadata": {
+            "page": 22
+        }
+    },
+    {
+        "page_content": "Every frame within the dataset is meticulously annotated with cubic backbonesdelineating the traffic lanes. Even in situations where lane markings are obscured orobstructed by vehicles, the annotations are based on contextual cues, as exemplified inFigure 8. This level of detailed annotation provides a robust foundation for trainingand evaluating lane detection algorithms, facilitating research into enhancing theirperformance across diverse real-world scenarios.\n21\nHere's a description of the image based on the provided text and the image itself:",
+        "metadata": {
+            "page": 22
+        }
+    },
+    {
+        "page_content": "The image displays a collage of nine different road scenes captured from a vehicle's dashboard camera.  Each scene shows a different road condition and environment.  These scenes are numbered 1 through 9.  Overlaid on each scene are colored lines (red, yellow, green, blue) likely representing lane markings or trajectory analysis for an automated driving system. The scenes range from sunny daytime conditions with clear lane markings, to nighttime driving with limited visibility, driving through tunnels, and crowded city streets.",
+        "metadata": {
+            "page": 22
+        }
+    },
+    {
+        "page_content": "To the right of the collage is a pie chart that statistically summarizes the different road conditions represented in the nine scenes.  The largest portions of the chart represent \"Normal\" and \"Crowded\" driving conditions.  Smaller portions represent \"Night,\" \"No Line,\" \"Shadow,\" \"Arrow,\" \"Dazzle Light,\" \"Curve,\" and \"Crossroad\" scenarios.  The percentages in the pie chart indicate the relative frequency of each road condition within the overall dataset from which these nine images are a sample.",
+        "metadata": {
+            "page": 22
+        }
+    },
+    {
+        "page_content": "3.1.2. Evaluation metrics\nIn lane detection tasks, the F1 score serves as a pivotal evaluation metric, offering abalanced assessment of a model's precision and recall capabilities. Its calculationinvolves the determination of true positives (TP), false positives (FP), and falsenegatives (FN) based on the model's predictions. The F1 score is derived from theharmonic mean of precision and recall, providing a single metric indicative of themodel's effectiveness in detecting lane markings accurately.\nPrecision, denoted as the ratio of TP to the sum of TP and FP, measures theaccuracy of the model's positive predictions. Conversely, recall, also known assensitivity, quantifies the model's ability to detect all positive instances, expressed asthe ratio of TP to the sum of TP and FN.\n\ud835\udc43\ud835\udc5f\ud835\udc52\ud835\udc50\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5c\ud835\udc5b=  \ud835\udc47\ud835\udc43+\ud835\udc39\ud835\udc43\n\ud835\udc47\ud835\udc43                                                23()\n\ud835\udc45\ud835\udc52\ud835\udc50\ud835\udc4e\ud835\udc59\ud835\udc59=  \ud835\udc47\ud835\udc43+\ud835\udc39\ud835\udc41\n\ud835\udc47\ud835\udc43                                                   24()\nWhere:",
+        "metadata": {
+            "page": 23
+        }
+    },
+    {
+        "page_content": "\ud835\udc43\ud835\udc5f\ud835\udc52\ud835\udc50\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5c\ud835\udc5b=  \ud835\udc47\ud835\udc43+\ud835\udc39\ud835\udc43\n\ud835\udc47\ud835\udc43                                                23()\n\ud835\udc45\ud835\udc52\ud835\udc50\ud835\udc4e\ud835\udc59\ud835\udc59=  \ud835\udc47\ud835\udc43+\ud835\udc39\ud835\udc41\n\ud835\udc47\ud835\udc43                                                   24()\nWhere:\nTP: stands for true positive, this occurs when the model correctly identifies a lane toany of the 9 lane categories as belonging to that category.FP: stands for false positive, this occurs when the model incorrectly identifies a lanethat does not belong to any of the 9 lane categories as belonging to one of thosecategories.FN: stands for false negative, this occurs when the model fails to identify a lanebelonging to any of the 9 lane categories as belonging to that category.\nThe F1 score, defined as twice the product of precision and recall divided bytheir sum, harmoniously balances precision and recall, ranging between 0 and 1. Ahigher F1 score denotes superior performance, signifying a model's proficiency inaccurately detecting lane markings while minimizing false positives and falsenegatives.\n\ud835\udc391 \ud835\udc46\ud835\udc50\ud835\udc5c\ud835\udc5f\ud835\udc52= 2 \u00d7 (\ud835\udc43\ud835\udc5f\ud835\udc52\ud835\udc50\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5c\ud835\udc5b+\ud835\udc45\ud835\udc52\ud835\udc50\ud835\udc4e\ud835\udc59\ud835\udc59)",
+        "metadata": {
+            "page": 23
+        }
+    },
+    {
+        "page_content": "\ud835\udc391 \ud835\udc46\ud835\udc50\ud835\udc5c\ud835\udc5f\ud835\udc52= 2 \u00d7 (\ud835\udc43\ud835\udc5f\ud835\udc52\ud835\udc50\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5c\ud835\udc5b+\ud835\udc45\ud835\udc52\ud835\udc50\ud835\udc4e\ud835\udc59\ud835\udc59)\n(\ud835\udc43\ud835\udc5f\ud835\udc52\ud835\udc50\ud835\udc56\ud835\udc60\ud835\udc56\ud835\udc5c\ud835\udc5b\u00d7\ud835\udc45\ud835\udc52\ud835\udc50\ud835\udc4e\ud835\udc59\ud835\udc59)                               (25) \nThe F1 score serves as a crucial benchmark, offering insights into the efficacyof lane detection algorithms under consideration. It gauges the overall performance ofmodels across varying datasets and experimental conditions, thereby facilitatinginformed comparisons and advancements in the field of autonomous driving andcomputer vision.\n22",
+        "metadata": {
+            "page": 23
+        }
+    },
+    {
+        "page_content": "In the realm of localization tasks, the Mean Squared Error (MSE) serves as afundamental metric for quantifying the accuracy of localization predictions. Itmeasures the average squared difference between the predicted and ground truthcoordinates across all samples. Formally, the MSE is computed as follows:\n\ud835\udc41\u2211\u200b(\ud835\udc5d\ud835\udc5c\ud835\udc60\ud835\udc52\n\ud835\udc56\n\ud835\udc56\u200b)\n2                               (26)\n\ud835\udc40\ud835\udc46\ud835\udc38=1\ud835\udc41\u200b\n\ud835\udc54\ud835\udc61\u200b \u2212\ud835\udc5d\ud835\udc5c\ud835\udc60\ud835\udc52\n\ud835\udc56=1\n\ud835\udc56\nWith N is the total number of samples.represents the ground truth\ud835\udc5d\ud835\udc5c\ud835\udc60\ud835\udc52\n\ud835\udc54\ud835\udc61\n\ud835\udc61\u210e\ud835\udc5d\ud835\udc5c\ud835\udc60\ud835\udc52\n\ud835\udc56\nlocalization coordinates for thesample.represents the predicted localization\ud835\udc56\n\ud835\udc61\u210e\ncoordinates for thesample.\ud835\udc56",
+        "metadata": {
+            "page": 24
+        }
+    },
+    {
+        "page_content": "\ud835\udc56=1\n\ud835\udc56\nWith N is the total number of samples.represents the ground truth\ud835\udc5d\ud835\udc5c\ud835\udc60\ud835\udc52\n\ud835\udc54\ud835\udc61\n\ud835\udc61\u210e\ud835\udc5d\ud835\udc5c\ud835\udc60\ud835\udc52\n\ud835\udc56\nlocalization coordinates for thesample.represents the predicted localization\ud835\udc56\n\ud835\udc61\u210e\ncoordinates for thesample.\ud835\udc56\nThe MSE quantifies the average discrepancy between predicted and actuallocalization coordinates, with higher values indicating greater localization errors. Inresearch and development contexts, minimizing the MSE is a primary objective, as itsignifies improved accuracy in localization tasks. This metric is particularly relevantin various domains, including robotics, navigation systems, and augmented reality,where precise localization is critical for successful operation.\n3.2. Implementation Detail",
+        "metadata": {
+            "page": 24
+        }
+    },
+    {
+        "page_content": "3.2. Implementation Detail\nIn the CULane dataset [17], a significant portion of redundant frames exists where theego-vehicle remains stationary and lane annotations remain unchanged. To mitigateoverfitting to these redundant frames, a strategy is employed where frames with anaverage pixel value difference below a threshold are removed. Through empiricalvalidation, an optimal threshold of 15 is determined. Following this process, 55,698frames (62.7% of the dataset) are retained for training. With this approach, the F1score of CLRNet-DLA34 sees notable improvement from 80.47 to 80.86 withconsistent 15-epoch training runs.\nThis research utilizes Autoware and AWSIM simulation platforms with theNishishinjuku map on an RTX 3060 machine running Ubuntu 22.04. The deeplearning model undergoes optimization using TensorRT, and all functions areoptimized in C++ language with the O3 optimizer flag.",
+        "metadata": {
+            "page": 24
+        }
+    },
+    {
+        "page_content": "For the deep learning model, a confidence threshold of 0.15 is set to balanceprecision and recall. Upon detection, lanes with low confidence have their particleweight reduced by a factor of 5 as described in Equation 12. Additionally, Equation 11\nincorporates a weight gains of 0.001, while Equation 19 setsto 1.0.\ud835\udc59\ud835\udc4e\ud835\udc61\ud835\udc37\ud835\udc56\ud835\udc60\ud835\udc61\u210e\ud835\udc5f\ud835\udc52\ud835\udc60\u210e\ud835\udc5c\ud835\udc59\ud835\udc51Parameters such as,,,are respectively set to\ud835\udc53\ud835\udc59\ud835\udc4e\ud835\udc61\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n\ud835\udc56\ud835\udc5a\ud835\udc62\ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n\ud835\udc56\ud835\udc5a\ud835\udc62\ud835\udc5a\ud835\udc56\ud835\udc5b\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc56\ud835\udc5a\ud835\udc62\ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc56\ud835\udc5a\ud835\udc62\n23",
+        "metadata": {
+            "page": 24
+        }
+    },
+    {
+        "page_content": "\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60\ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60\ud835\udc5a\ud835\udc56\ud835\udc5b\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60\ud835\udc5a\ud835\udc4e\ud835\udc65\ud835\udc64\ud835\udc52\ud835\udc56\ud835\udc54\u210e\ud835\udc61\n\ud835\udc54\ud835\udc5b\ud835\udc60\ud835\udc60\n0.5, 3.0, 0.1 and 1.0. Similarly,,,,are\ud835\udc53\ud835\udc59\ud835\udc4e\ud835\udc61\ud835\udc5f\ud835\udc4e\ud835\udc51\ud835\udc56\ud835\udc62\ud835\udc60\nrespectively set to 0.5, 10.0, 0.5 and 5.0. The Mahalanobis distance threshold is 30.0.In Figure 9, an example of the method employed in this research is depicted.\nFigure 12: Integrated result of our method to Autoware and AWSIM simulation\n3.3. Result Analysis3.3.1. Whole System Result Analysis",
+        "metadata": {
+            "page": 25
+        }
+    },
+    {
+        "page_content": "Figure 12: Integrated result of our method to Autoware and AWSIM simulation\n3.3. Result Analysis3.3.1. Whole System Result Analysis\nIterative Closest Point (ICP) and Normal Distributions Transform (NDT),LiDAR-based localization techniques, have also shown the ability to achievecentimeter-level accuracy. Still, because of their shortcomings, these approaches arenot ideal for high-speed situations, even with their remarkable accuracy. Theircomparatively low frequency is a significant drawback, as it could prevent them fromproviding updates fast enough to facilitate the kind of quick decision-making neededin high-speed settings. Furthermore, for many autonomous vehicle applications, theirhigh cost renders their widespread deployment economically unfeasible.",
+        "metadata": {
+            "page": 25
+        }
+    },
+    {
+        "page_content": "Although these techniques are incredibly accurate, their low frequency and highcost make them unsuitable for high-speed scenarios. In order to enable safe anddependable autonomous driving at high speeds, it is still imperative to achievecomparable accuracy with less expensive sensor suites, albeit with somewhat lessprecision. It is imperative to strike a balance between real-time performance,affordability, and accuracy when creating localization solutions that satisfy thestringent needs of fast-moving autonomous vehicles.",
+        "metadata": {
+            "page": 25
+        }
+    },
+    {
+        "page_content": "For accurate lane-level localization at speeds of up to 50 km/h, a frame rate ofapproximately 15 fps is essential to maintain an estimation per meter. In scenariosinvolving highway speeds of up to 100 km/h, the system must achieve a minimumframe rate of about 30 fps to uphold this 1-meter estimation. Through the utilization ofa proposed method involving a TensorRT lane detection model, the system cancurrently reach a frame rate of approximately ~35 fps under the worst-case conditions.And the opencv graph segmentation combined with [16] algorithm to find the mostroad-similarity is unreliable and eventually causes ego car collisions with thepavement and the mean euclidean error is unmeasurable. With our method, the ego canfine tune lateral error with lane information and longitudinal error with the help of imu\n24\nHere's a description of the image based on the provided text and image:",
+        "metadata": {
+            "page": 25
+        }
+    },
+    {
+        "page_content": "The image shows a split screen.  The left half displays a software control panel, likely for a self-driving car simulation.  The panel shows various status indicators, including \"AUTONOMOUS\" mode being active, \"INITIALIZED\" localization, and \"MOVING\" motion status.  There are controls for routing, localization, motion, and failsafe. There is a section for views and  a visual representation of sensor data, which is mostly dark with a few lines and circles, suggesting sensor readings or a point cloud. A \"No Image\" message is displayed in the bottom left of this section. Speed and steering angle are shown as 32.45 km/h and -0.2deg respectively.",
+        "metadata": {
+            "page": 25
+        }
+    },
+    {
+        "page_content": "The right half displays a simulated first-person view from a self-driving car traveling down a city street.  Red lines emanating from the car suggest the detection of other objects or lanes. The simulation software's branding (\"TIER IV AWSIM v 1.2.0\") is visible in the bottom right corner.  The scene is realistic, showing city buildings and roads. A time scale indicator shows a value of x1.00. The overall impression is that of a self-driving car simulation environment being monitored and controlled.",
+        "metadata": {
+            "page": 25
+        }
+    },
+    {
+        "page_content": "and vehicle odometer. As a result, the mean euclidean error of the proposed method isapproximately 0.5m.\nThe ego car can retain lane-level accuracy in many driving scenarios byachieving a mean Euclidean error of 0.5 meters in localization. But this level ofaccuracy might not be enough for autonomous cars, particularly those operating athigh speeds, to guarantee accuracy and safety. In order to make snap decisions andmaneuver through complicated environments with very little room for error,high-speed vehicles need to be able to localize themselves incredibly precisely. Thus,although 0.5 meters might be adequate for simple lane-keeping duties, a higheraccuracy, possibly less than 0.1 meters becomes necessary to guarantee thedependability and safety of autonomous cars, particularly at high speeds where evensmall deviations might result in potentially hazardous circumstances.\nTable 2. Comparison of FPS and Mean euclidean error of difference visual-based localization methods in",
+        "metadata": {
+            "page": 26
+        }
+    },
+    {
+        "page_content": "Table 2. Comparison of FPS and Mean euclidean error of difference visual-based localization methods in\nAWSIM simulationMethodCollision\nFPSMean euclidean\nerrorYabloc [16]Proposed methodwithout IMU\nYesNo\n~14~37\nUnmeasurable\n~1.5m\nProposed MethodNo~35~0.5m\n3.3.2. Corner Cases",
+        "metadata": {
+            "page": 26
+        }
+    },
+    {
+        "page_content": "~1.5m\nProposed MethodNo~35~0.5m\n3.3.2. Corner Cases\nThe current AWSIM planning system can only generate a path if the goal pose iswithin the mapped area. This limitation prevents the ego car from navigating tounknown regions not represented in the map. Another issue arises when there arediscrepancies between the map and real-world conditions. In such cases, the systemmay fail dramatically due to the disparities between the lanelet2 map and actual roadconditions. Addressing these challenges typically requires manual efforts to update themap according to real-world observations. However, as perception technologyadvances and becomes capable of producing highly accurate road markings, there ispotential for leveraging manual driving to build maps using perception data, withminimal additional effort required for fine-tuning. Ultimately, an improved map leadsto better localization capabilities, highlighting the importance of addressing thesechallenges for robust autonomous driving systems.",
+        "metadata": {
+            "page": 26
+        }
+    },
+    {
+        "page_content": "When road markings are inadequately detected, they can be broadly categorizedinto two types: those with low recall and those with low precision. Low recallinstances entail a reduced amount of information available for the matching process,leading to diminished confidence in the accuracy of localization. Conversely, lowprecision scenarios involve the inadvertent utilization of erroneous road markings formatching with the lanelet2 map. This erroneous matching can deceive the system intobelieving that localization is reliable, as even non-road markings may coincidentallyalign with positions on the lanelet2 map when transformed using the camera matrix.This highlights the potential pitfalls in relying solely on visual data for localization indynamic environments.\n25",
+        "metadata": {
+            "page": 26
+        }
+    },
+    {
+        "page_content": "In the scenario where GNSS signal is not reachable, the ego car employs amulti-faceted approach to maintain localization amidst challenges such as GNSSsignal loss. Initially, it relies on its previous estimated pose and integrates IMU datafor dead reckoning, providing a baseline for position tracking. This strategy allows thevehicle to maintain a continuous sense of its position, compensating for temporarydisruptions in external localization cues.\nSubsequently, the camera system comes into play, leveraging visual inputs torefine and correct the final pose estimation. By analyzing the surroundings anddetecting road markings, lane boundaries, and other visual cues, the camera systemenhances the accuracy of localization, especially in areas where GNSS signals mightbe unreliable or unavailable.",
+        "metadata": {
+            "page": 27
+        }
+    },
+    {
+        "page_content": "However, as the duration of GNSS signal loss prolongs, the uncertaintyassociated with the localization pose gradually increases. This escalation inuncertainty poses a significant challenge to the reliability of the ego car's positionestimation. To address this, the vehicle employs a proactive measure: it initiates apredetermined protocol to halt its movement once a specified timestamp is reachedfollowing the loss of GNSS signal.\nBy halting under such circumstances, the ego car prioritizes safety and riskmitigation, recognizing the potential dangers associated with navigating withoutreliable localization information. This decision serves to prevent potentially hazardoussituations that could arise from inaccuracies in position estimation, ensuring the safetyof both occupants and surrounding traffic participants.",
+        "metadata": {
+            "page": 27
+        }
+    },
+    {
+        "page_content": "In essence, the ego car's adaptive approach to localization managementunderscorestheimportanceofintegratingmultiplesensormodalitiesandimplementing robust safety protocols to navigate effectively in dynamic environments,even in the face of challenging conditions such as GNSS signal loss.\n26",
+        "metadata": {
+            "page": 27
+        }
+    },
+    {
+        "page_content": "4. Conclusion & Future Work\nThe proposed approach addresses the limitations inherent in traditional lane detectionalgorithms by leveraging the capabilities of a deep learning model. This model offersenhanced reliability in detecting lane lines, thereby providing a robust foundation forsubsequent localization refinement. By integrating the deep learning-based lanedetection output with the Lanelet2 predefined map, the lateral error is finely tuned,ensuring accurate alignment with the roadway geometry.\nFurthermore, to refine the longitudinal error, additional sensor data such asInertial Measurement Unit (IMU) data and vehicle odometry are utilized. Thesecomplementary sources of information enable precise correction of longitudinalpositioning discrepancies, thereby enhancing overall localization accuracy.",
+        "metadata": {
+            "page": 28
+        }
+    },
+    {
+        "page_content": "The efficacy of the proposed method is underscored by its superior performancecompared to previous works, as evidenced by both improved Frames Per Second(FPS) and reduced position error, as detailed in Table 2. Despite the notableadvancements achieved, it's acknowledged that challenges persist, particularly inscenarios where lane lines are curved or not clearly visible, leading to occasionalfailures in the AWSIM simulation environment.\nAs the core lane detection model relies on CLRNet, trained on the CULanedataset, there remains room for further enhancement through the continuousrefinement of this model. Future iterations of the approach stand to benefit fromadvancements in lane detection technology, promising even greater robustness andreliability across diverse environmental conditions.",
+        "metadata": {
+            "page": 28
+        }
+    },
+    {
+        "page_content": "In conclusion, the proposed method represents a significant stride forward invisual-based mono-camera localization challenges. Its comprehensive integration ofdeep learning-based lane detection, map matching, and sensor fusion techniques lays asolid foundation for future research endeavors in this domain, offering valuableinsights and opportunities for further innovation and improvement.\n27",
+        "metadata": {
+            "page": 28
+        }
+    },
+    {
+        "page_content": "References\n1. Davison, A. J., Reid, I. D., Molton, N. D., & Stasse, O. MonoSLAM: Real-Time\nSingle Camera SLAM. IEEE Transactions on Pattern Analysis and MachineIntelligence, 29(6), 1052-1067. DOI: 10.1109/TPAMI.2007.1049. (2007)2. Mur-Artal, R., Montiel, J. M. M., & Tard\u00f3s, J. D. ORB-SLAM: A Versatile and\nAccurate Monocular SLAM System. IEEE Transactions on Robotics, 31(5),1147-1163. DOI: 10.1109/TRO.2015.2463671. (2015)3. Wang, S., Clark, R., Wen, H., & Trigoni, N. DeepVO: Towards End-to-End Visual\nOdometry with Deep Recurrent Convolutional Neural Networks. arXiv preprintarXiv:1709.08429. DOI: 10.1109/ICRA.2017.7989236 (2017).4. Mur-Artal, R., & Tard\u00f3s, J. D. ORB-SLAM2: an Open-Source SLAM System for\nMonocular, Stereo and RGB-D Cameras. arXiv preprint arXiv:1610.06475. DOI:10.1109/TRO.2017.2705103 (2016)5. Campos, C., Elvira, R., Rodr\u00edguez, J. J. G., Montiel, J. M. M., & Tard\u00f3s, J. D.",
+        "metadata": {
+            "page": 29
+        }
+    },
+    {
+        "page_content": "Monocular, Stereo and RGB-D Cameras. arXiv preprint arXiv:1610.06475. DOI:10.1109/TRO.2017.2705103 (2016)5. Campos, C., Elvira, R., Rodr\u00edguez, J. J. G., Montiel, J. M. M., & Tard\u00f3s, J. D.\nORB-SLAM3: An Accurate Open-Source Library for Visual, Visual-Inertial andMulti-MapSLAM.arXivpreprintarXiv:2007.11898.DOI:10.1109/TRO.2021.3075644 (2020)6. Neven, D., De Brabandere, B., Georgoulis, S., Proesmans, M., & Van Gool, L.\nTowards End-to-End Lane Detection: an Instance Segmentation Approach. arXivpreprint arXiv:1802.05591 (2018)7. Lo, S.-Y., Hang, H.-M., Chan, S.-W., & Lin, J.-J. Multi-Class Lane Semantic\nSegmentationusingEfficientConvolutionalNetworks.arXivpreprintarXiv:1907.09438. (2019)8. Chang, D., Chirakkal, V., Goswami, S., Hasan, M., Jung, T., Kang, J., Kee, S.-C.,\nLee, D., & Singh, A. P. Multi-lane Detection Using Instance Segmentation andAttentive Voting. arXiv preprint arXiv:2001.00236. (2020)9. L. Tabelini, et al. (2021). \"PolyLaneNet: Lane Estimation via Deep Polynomial",
+        "metadata": {
+            "page": 29
+        }
+    },
+    {
+        "page_content": "Regression,\" in 2020 25th International Conference on Pattern Recognition(ICPR), Milan, Italy, pp. 6150-6156. doi: 10.1109/ICPR48806.2021.941226510.Meyer, A., Skudlik, P., Pauls, J.-H., & Stiller, C. YOLinO: Generic Single Shot\nPolyline Detection in Real Time. In Proceedings of the IEEE/CVF InternationalConference on Computer Vision Workshops (pp. 2916-2925). (2021).11. Tabelini, L., Berriel, R., Paix\u00e3o, T. M., Badue, C., De Souza, A. F., &\nOliveira-Santos, T. Keep your Eyes on the Lane: Real-time Attention-guided LaneDetection. In Conference on Computer Vision and Pattern Recognition (CVPR).(2021)12.Zheng, T., Huang, Y., Liu, Y., Tang, W., Yang, Z., Cai, D., & He, X. CLRNet:\nCross Layer Refinement Network for Lane Detection. In Proceedings of theIEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) (pp.898-907). (2022)13.Liu, L., Chen, X., Zhu, S., & Tan, P. (2021). CondLaneNet: a Top-to-down Lane",
+        "metadata": {
+            "page": 29
+        }
+    },
+    {
+        "page_content": "Detection Framework Based on Conditional Convolution. In Proceedings of theIEEE/CVF International Conference on Computer Vision (ICCV), 2021, pp.3773-3782. arXiv preprint arXiv:2105.05003.\n28",
+        "metadata": {
+            "page": 29
+        }
+    },
+    {
+        "page_content": "14.David, J.-A. (2015). Visual Map-based Localization applied to Autonomous\nVehicles. Available at: https://api.semanticscholar.org/CorpusID:11115953915.Sadli, R., Afkir, M., Hadid, A., Rivenq, A., & Taleb-Ahmed, A. (2022).\nMap-Matching-BasedLocalization Using Camera and Low-Cost GPS ForLane-LevelAccuracy.ProcediaComputerScience,198,255-262.ISSN1877-0509. DOI: 10.1016/j.procs.2021.12.237.16.Tier4. (2023). YabLoc: A Repository for visual-based localization method. GitHub.\nhttps://github.com/tier4/YabLoc17.Zhou, Y., Sun, J., & Li, Y. (2019). CULane: A Large-Scale Dataset for Semantic\nSegmentation of Urban Scenes. In Proceedings of the IEEE Conference onComputer Vision and Pattern Recognition Workshops (pp. 1273-1282).\n29",
+        "metadata": {
+            "page": 30
+        }
+    }
+]

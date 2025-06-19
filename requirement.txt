@@ -1,0 +1,33 @@
+# --- LangChain ecosystem ---
+langchain>=0.1.0
+langchain-core>=0.1.0
+langchain-milvus>=0.1.0
+langchain-ollama>=0.1.0
+langchain-google-genai>=0.1.0
+langchain-community>=0.1.0
+
+# --- Embeddings + vector search ---
+sentence-transformers>=2.2.2
+faiss-cpu>=1.7.4
+
+# --- Milvus ---
+pymilvus>=2.3.4
+
+# --- Web framework ---
+fastapi>=0.110.0
+uvicorn>=0.29.0
+
+# --- Frontend (Streamlit) ---
+streamlit>=1.35.0
+
+# --- PDF / Image processing ---
+PyMuPDF>=1.23.0      # fitz
+Pillow>=10.0.0        # Image.fromarray, open()
+torch>=2.0.0          # dùng cho Ollama embeddings
+
+# --- Google Gemini API ---
+google-generativeai>=0.3.2
+
+# --- Other utilities ---
+python-dotenv>=1.0.1  # load_dotenv
+requests>=2.31.0
