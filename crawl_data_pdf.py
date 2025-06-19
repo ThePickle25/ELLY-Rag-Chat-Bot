@@ -9,13 +9,13 @@ import os
 from typing import List
 import google.generativeai as genai
 
+
 # ---Config---
-PDF_PATH = "Thesis-AIP490_G9.docx-1.pdf"
 OUTPUT_DIR = ""
 CHUNK_SIZE = 1000
 OVERLAP = 200
-GEMINI_API = "AIzaSyBjYWfBi3Yo2dT46Maw6sc0hzIxyoaicn8"
-MODEL_NAME = "models/gemini-1.5-flash"
+GEMINI_API = os.getenv("GEMINI_API_KEY")
+MODEL_NAME = os.getenv("GEMINI_MODEL_NAME")
 
 device = "cuda" if torch.cuda.is_available() else 'cpu'
 

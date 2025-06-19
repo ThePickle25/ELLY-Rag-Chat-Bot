@@ -7,6 +7,9 @@ from seed_data import seed_from_pdf
 from agent import get_agent, get_retriever
 import json
 from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -18,7 +21,7 @@ app.add_middleware(
     allow_headers='*'
 )
 
-MILVUS_URL = "http://localhost:19530"
+MILVUS_URL = os.getenv("MILVUS_URL")
 TEMP_UPLOAD_DIR = "./uploaded_files"
 os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
 
